@@ -1,0 +1,35 @@
+camera:
+  device_index: 0
+  resolution_width: 1280
+  resolution_height: 720
+  fps_target: 30
+
+detection:
+  model_size: "n"              # n, s, m, l, x (nano to extra-large)
+  confidence_threshold: 0.5
+  device: "cpu"                # cpu, cuda, mps (Apple Silicon)
+  frame_skip: 2                # Process every Nth frame
+
+proximity:
+  distance_threshold_pixels: 200
+  temporal_consistency_frames: 5  # Must detect for 5 consecutive frames
+  cooldown_seconds: 10            # Minimum time between events for same person
+
+screenshot:
+  save_enabled: true
+  quality: 95                     # JPEG quality
+  include_annotations: true       # Draw bounding boxes
+  retention_days: 30
+
+dashboard:
+  port: 8501
+  refresh_interval_ms: 100
+  gallery_items_per_page: 12
+
+storage:
+  database_path: "data/database/events.db"
+  screenshots_base_path: "data/screenshots"
+
+logging:
+  level: "INFO"              # DEBUG, INFO, WARNING, ERROR
+  file: "phone_shamer.log"
