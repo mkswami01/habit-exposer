@@ -1,4 +1,4 @@
-"""Configuration loader for Phone Shamer application."""
+"""Configuration loader for Habit Exposer application."""
 
 import yaml
 from pathlib import Path

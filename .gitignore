@@ -44,9 +44,13 @@ yolo11*.pt
 runs/
 ultralytics_*.txt
 
+# MediaPipe gesture recognition model
+*.task
+gesture_recognizer.task
+
 # Logs
 *.log
-phone_shamer.log
+habit_exposer.log
 
 # OS
 .DS_Store

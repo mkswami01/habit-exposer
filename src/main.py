@@ -2,6 +2,8 @@ import cv2
 import sys
 import os
 from pathlib import Path
+import threading
+import uvicorn
 
 from core.camera_manager import CameraManager
 from core.detector import PhoneDetector
@@ -10,8 +12,9 @@ from storage.screenshot_manager import ScreenshotManager
 from storage.database import DatabaseManager
 from utils.config import Config
 from utils.logger import setup_logger
+from core.gesture_detector import GestureDetector
 
-class PhoneShamerApp:
+class HabitExposerApp:
     """Main application orchestrator."""
 
     def __init__(self):
@@ -19,12 +22,14 @@ class PhoneShamerApp:
 
         self.config = Config.load()
         self.logger = setup_logger(self.config)
-        self.logger.info("Phone Shamer application initialized")
+        self.logger.info("Habit Exposer application initialized")
 
         # Auto-detect display availability (headless vs GUI mode)
-        self.has_display = self._check_display()
+        # TEMPORARY: Hardcode to True for testing
+        self.has_display = True  # Force GUI mode
+        # self.has_display = self._check_display()
         if self.has_display:
-            self.logger.info("Display detected - GUI mode enabled")
+            self.logger.info("Display FORCED ON - GUI mode enabled")
         else:
             self.logger.info("No display detected - Running in headless mode")
 
@@ -54,6 +59,39 @@ class PhoneShamerApp:
 
         self.db = DatabaseManager(self.config.storage.database_path)
         self.logger.info("Database initialized")
+
+        self.gesture_detected = GestureDetector()
+        self.monitoring_paused = True
+
+        # Start API server in background thread
+        self.api_thread = None
+        self._start_api_server()
+
+    def _start_api_server(self):
+        """Start the FastAPI server in a background thread."""
+        try:
+            # Import the FastAPI app
+            api_path = Path(__file__).parent.parent / "api.py"
+            sys.path.insert(0, str(api_path.parent))
+
+            from api import app
+
+            # Run uvicorn in a separate thread
+            def run_api():
+                uvicorn.run(
+                    app,
+                    host="0.0.0.0",
+                    port=8000,
+                    log_level="warning"  # Reduce noise
+                )
+
+            self.api_thread = threading.Thread(target=run_api, daemon=True)
+            self.api_thread.start()
+
+            self.logger.info("📊 API server started at http://localhost:8000")
+            self.logger.info("📚 API docs at http://localhost:8000/docs")
+        except Exception as e:
+            self.logger.warning(f"Could not start API server: {e}")
 
     def _check_display(self):
         """Check if display is available for GUI."""
@@ -90,43 +128,46 @@ class PhoneShamerApp:
             if frame_count % self.config.detection.frame_skip != 0:
                 continue
 
-            # Run detection
-            detections = self.detector.detect(frame)
+              # 1. Check for gestures (change state)
+            gesture = self.gesture_detected.detect_control_gesture(frame)
+            if gesture == "start":
+                self.monitoring_paused = False
+                self.logger.info("🖐️ Monitoring STARTED!")
+            elif gesture == "stop":
+                self.monitoring_paused = True
+                self.logger.info("✊ Monitoring STOPPED!")
 
-            # Analyze proximity
-            event = self.proximity_analyzer.analyze(detections)
+            if not self.monitoring_paused:
+                 # Detect phones and people
+                detections = self.detector.detect(frame)
 
-            # If event detected, save screenshot and log to database
-            if event:
-                annotated = self.detector.annotate_frame(frame, detections)
-                screenshot_path = self.screenshot_manager.save_screenshot(
-                    annotated, event, detections
-                )
+                # Draw bounding boxes on frame (always show boxes when monitoring!)
+                display_frame = self.detector.annotate_frame(frame, detections)
 
-                # Save event to database
-                self.db.add_event(event, screenshot_path)
+                # Add status text (green - active)
+                cv2.putText(display_frame, "MONITORING: ACTIVE", (50, 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
 
-                # Get statistics
-                stats = self.db.get_statistics_summary()
+                # Analyze if phone is being used
+                event = self.proximity_analyzer.analyze(detections)
 
-                self.logger.info(
-                    f"Phone usage detected! Screenshot saved: {screenshot_path}"
-                )
-                self.logger.info(
-                    f"Stats - Today: {stats['today_events']}, Total: {stats['total_events']}"
-                )
-
-            # Display frame (only if display available)
-            if self.has_display:
-                annotated = self.detector.annotate_frame(frame, detections)
-                cv2.imshow("Phone Shamer", annotated)
-
-                # Check for 'q' key to quit
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    break
+                # If phone usage detected, save it!
+                if event:
+                    screenshot_path = self.screenshot_manager.save_screenshot(
+                        display_frame, event, detections
+                    )
+                    self.db.add_event(event, screenshot_path)
+                    self.logger.info(f"📱 Phone usage detected! Screenshot: {screenshot_path}")
             else:
-                # Headless mode - small delay to avoid CPU spinning
-                cv2.waitKey(1)
+                # Monitoring stopped - just show frame with status
+                display_frame = frame.copy()
+                cv2.putText(display_frame, "MONITORING: STOPPED", (50, 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
+
+            # Display the frame
+            cv2.imshow('Habit Exposer', display_frame)
+            if cv2.waitKey(1) == ord('q'):
+                break
 
     def cleanup(self):
         """Clean up resources."""
@@ -135,6 +176,9 @@ class PhoneShamerApp:
             self.camera_manager.release()
         if hasattr(self, "db") and self.db is not None:
             self.db.close()
+        # TODO(human): Close gesture detector
+        # if hasattr(self, "gesture_detector") and self.gesture_detector is not None:
+        #     self.gesture_detector.close()
         if self.has_display:
             cv2.destroyAllWindows()
         self.logger.info("Shutdown complete")
@@ -142,7 +186,7 @@ class PhoneShamerApp:
 
 def main():
     """Entry point."""
-    app = PhoneShamerApp()
+    app = HabitExposerApp()
 
     try:
         app.run()

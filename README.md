@@ -1,18 +1,29 @@
-# 📱 Phone Shamer
+# 📱 Habit Exposer
 
-A real-time phone usage detection system using YOLOv8 computer vision. Detects when people are using their phones and automatically captures screenshots as evidence.
+A real-time habit detection system using AI computer vision and gesture control. Detects phone usage, tracks bad habits, and exposes them through automated screenshots and analytics.
 
 ## Features
 
+### 🎯 Core Detection
 - 🤖 **YOLOv8 Detection** - Fast and accurate person and phone detection
-- 🎯 **Smart Usage Detection** - Bounding box overlap detection with temporal consistency
-- 📸 **Automatic Screenshots** - Captures annotated screenshots when phone usage is detected
-- 📊 **SQLite Database** - Tracks all events with timestamps and statistics
-- 📈 **Statistics Viewer** - View daily/hourly analytics and trends
-- 🎨 **Social Media Posts** - Generate fun, shareable "shame posts" for Instagram/Twitter
-- 📱 **Instagram Integration** - Post directly to Stories/Feed (with approval safeguards)
-- ⚙️ **Configurable** - Easy YAML configuration for all settings
-- 🔄 **Real-time Processing** - Live camera feed with detection visualization
+- 🖐️ **Gesture Control** - Start/stop monitoring with hand gestures (MediaPipe)
+  - Open Palm (right hand) = START monitoring
+  - Closed Fist (right hand) = STOP monitoring
+- 🎯 **Smart Usage Detection** - Bounding box overlap with temporal consistency
+- 📸 **Automatic Screenshots** - Captures evidence when phone usage detected
+- 🔄 **Real-time Visualization** - Live camera feed with bounding boxes
+
+### 📊 Data & Analytics
+- 💾 **SQLite Database** - Tracks all events with timestamps
+- 🌐 **REST API** - Access stats via HTTP endpoints
+- 📈 **Statistics** - Daily/hourly analytics and trends
+- 🎨 **Social Media Posts** - Generate shareable content (Strava-style)
+- 📱 **Instagram Integration** - Auto-post to Stories/Feed (with safeguards)
+
+### ⚙️ Configuration
+- 📝 **YAML Config** - Easy configuration for all settings
+- 🖥️ **Auto-detect Mode** - GUI when display available, headless when SSH
+- 🔧 **Flexible** - Adjust confidence thresholds, cooldowns, frame skip
 
 ## Installation
 
@@ -41,6 +52,48 @@ This will install:
 
 On first run, YOLOv8 will automatically download the model weights (~6MB for nano model).
 
+## 📁 Project Structure
+
+```
+habit-exposer/
+├── src/                        # Core application code
+│   ├── core/                   # Detection modules
+│   │   ├── camera_manager.py
+│   │   ├── detector.py         # YOLOv8 wrapper
+│   │   ├── gesture_detector.py # MediaPipe gestures
+│   │   └── proximity_analyzer.py
+│   ├── storage/                # Data persistence
+│   │   ├── database.py         # SQLite interface
+│   │   └── screenshot_manager.py
+│   ├── utils/                  # Utilities
+│   │   ├── config.py
+│   │   └── logger.py
+│   └── main.py                 # Main application
+│
+├── scripts/                    # Utility scripts
+│   ├── view_stats.py           # CLI stats viewer
+│   ├── list_cameras.py         # Camera detection
+│   ├── create_*_post.py        # Post generators
+│   └── post_to_instagram.py   # Instagram integration
+│
+├── config/                     # Configuration
+│   └── config.yaml
+│
+├── models/                     # AI models (auto-downloaded)
+│   ├── yolov8n.pt             # YOLO model
+│   └── gesture_recognizer.task # MediaPipe model
+│
+├── data/                       # Generated data
+│   ├── screenshots/            # Captured evidence
+│   ├── database/              # SQLite database
+│   └── posts/                 # Generated images
+│
+├── api.py                      # REST API server
+├── requirements.txt            # Python dependencies
+├── README.md                   # This file
+└── .env.example               # Environment template
+```
+
 ## Usage
 
 ### Run the detection system:
@@ -50,22 +103,44 @@ python src/main.py
 ```
 
 The application will:
-1. Initialize the camera
-2. Load the YOLOv8 model
+1. Initialize the camera and YOLOv8 model
+2. Start the REST API server (http://localhost:8000)
 3. **Auto-detect** display mode (GUI or headless)
-4. Start detecting people and phones in real-time
-5. Display live feed with detection boxes (if monitor attached)
-6. Save screenshots when phone usage is detected for 5 consecutive frames
+4. Wait for gesture control to start monitoring
+
+**🖐️ Gesture Controls (Right Hand Only):**
+- **Open Palm (🖐️)** → START monitoring
+- **Closed Fist (✊)** → STOP monitoring
+- On-screen status shows "MONITORING: ACTIVE" (green) or "STOPPED" (red)
 
 **🖥️ Auto-Detect Modes:**
-- **With monitor:** Shows live camera feed, press `q` to quit
+- **With monitor:** Shows live camera feed with bounding boxes, press `q` to quit
 - **Headless (SSH):** Runs without GUI, press `Ctrl+C` to quit
 - Same code works in both environments automatically!
 
-### View Statistics:
+### Access the API:
+
+While the app is running, access stats via HTTP:
+
+**Summary stats:**
+```bash
+curl http://localhost:8000/stats
+```
+
+**Daily breakdown:**
+```bash
+curl http://localhost:8000/stats/daily
+```
+
+**API docs (interactive):**
+```
+http://localhost:8000/docs
+```
+
+### View Statistics (CLI):
 
 ```bash
-python3 view_stats.py
+python3 scripts/view_stats.py
 ```
 
 This displays:
@@ -75,6 +150,8 @@ This displays:
 - Week-over-week trends
 
 ### Create Social Media Posts:
+
+See `scripts/README.md` for all available scripts.
 
 Generate fun, shareable "shame posts" for Instagram/Twitter:
 

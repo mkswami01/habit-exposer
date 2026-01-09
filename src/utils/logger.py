@@ -1,4 +1,4 @@
-"""Logging utilities for Phone Shamer application."""
+"""Logging utilities for Habit Exposer application."""
 
 import logging
 import sys
@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 
-def setup_logger(config=None, name: str = "phone_shamer") -> logging.Logger:
+def setup_logger(config=None, name: str = "habit_exposer") -> logging.Logger:
     """
     Setup and configure logger.
 
@@ -25,7 +25,7 @@ def setup_logger(config=None, name: str = "phone_shamer") -> logging.Logger:
         log_file = config.logging.file
     else:
         log_level = logging.INFO
-        log_file = "phone_shamer.log"
+        log_file = "habit_exposer.log"
 
     logger.setLevel(log_level)
 
@@ -56,7 +56,7 @@ def setup_logger(config=None, name: str = "phone_shamer") -> logging.Logger:
     return logger
 
 
-def get_logger(name: str = "phone_shamer") -> logging.Logger:
+def get_logger(name: str = "habit_exposer") -> logging.Logger:
     """
     Get existing logger or create a new one.
 
