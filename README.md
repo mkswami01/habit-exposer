@@ -405,14 +405,6 @@ ModuleNotFoundError: No module named 'ultralytics'
 - [x] Statistics viewer with analytics ✅
 - [x] Social media post generator ✅
 - [x] Instagram auto-posting with safety ✅
-- [ ] Streamlit dashboard with live graphs
-- [ ] Multiple person tracking with IDs
-- [ ] Distance-based proximity detection (vs overlap)
-- [ ] Email/SMS notifications
-- [ ] Privacy mode (face blurring)
-- [ ] Twitter/X integration
-- [ ] Scheduled posting with cron
-- [ ] More post templates and themes
 
 ## License
 
