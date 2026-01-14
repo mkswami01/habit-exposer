@@ -25,13 +25,11 @@ class HabitExposerApp:
         self.logger.info("Habit Exposer application initialized")
 
         # Auto-detect display availability (headless vs GUI mode)
-        # TEMPORARY: Hardcode to True for testing
-        self.has_display = True  # Force GUI mode
-        # self.has_display = self._check_display()
+        self.has_display = self._check_display()
         if self.has_display:
-            self.logger.info("Display FORCED ON - GUI mode enabled")
+            self.logger.info("🖥️ Display detected - Running in GUI mode")
         else:
-            self.logger.info("No display detected - Running in headless mode")
+            self.logger.info("📟 No display detected - Running in headless mode (no cv2.imshow)")
 
         self.detector = PhoneDetector(
             model_size=self.config.detection.model_size,
@@ -96,16 +94,22 @@ class HabitExposerApp:
     def _check_display(self):
         """Check if display is available for GUI."""
         # Check DISPLAY environment variable (Linux/Mac)
-        if 'DISPLAY' not in os.environ:
+        display_env = os.environ.get('DISPLAY', None)
+        if display_env is None:
+            self.logger.debug("DISPLAY env variable not set - headless mode")
             return False
+
+        self.logger.debug(f"DISPLAY env found: {display_env}")
 
         # Try to create a test window
         try:
             test_img = cv2.imread('/dev/null')  # Dummy
             cv2.namedWindow('test', cv2.WINDOW_NORMAL)
             cv2.destroyWindow('test')
+            self.logger.debug("OpenCV window test passed - GUI available")
             return True
-        except:
+        except Exception as e:
+            self.logger.debug(f"OpenCV window test failed: {e} - headless mode")
             return False
 
     def run(self):
@@ -164,10 +168,11 @@ class HabitExposerApp:
                 cv2.putText(display_frame, "MONITORING: STOPPED", (50, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
 
-            # Display the frame
-            cv2.imshow('Habit Exposer', display_frame)
-            if cv2.waitKey(1) == ord('q'):
-                break
+            # Display the frame (only in GUI mode)
+            if self.has_display:
+                cv2.imshow('Habit Exposer', display_frame)
+                if cv2.waitKey(1) == ord('q'):
+                    break
 
     def cleanup(self):
         """Clean up resources."""

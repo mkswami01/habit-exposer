@@ -21,5 +21,5 @@ class CameraManager:
         return frame
 
     def release(self):
+        """Release the camera capture."""
         self.cap.release()
-        cv2.destroyAllWindows()
